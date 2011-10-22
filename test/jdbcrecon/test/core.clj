@@ -37,11 +37,11 @@
         tgt-rows (range-rows 0 10)
         result (ordered-row-recon src-rows tgt-rows)]
     (is (= (count result) 10))
-    (is (= (count (filter #(= :tgt-behind %1) result)) 10))))
+    (is (= (count (filter #(= :version-mismatch %1) result)) 10))))
 
 (deftest test-ordered-row-recon-source-behind
   (let [src-rows (range-rows 0 10)
         tgt-rows (range-rows 0 10 1)
         result (ordered-row-recon src-rows tgt-rows)]
     (is (= (count result) 10))
-    (is (= (count (filter #(= :src-behind %1) result)) 10))))
+    (is (= (count (filter #(= :version-mismatch %1) result)) 10))))
