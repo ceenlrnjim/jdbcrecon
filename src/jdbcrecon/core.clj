@@ -2,14 +2,20 @@
   (:require [clojure.java.jdbc :as sql]))
 
 ; TODO: build query
-(defn- build-query
+(defn build-query
   "Uses the params to build the select query. 
   Expects to have :tblname, :keycols, :versioncol, and optional :querysuffix"
   [params]
   ; TODO: need commas
-  (str "SELECT" (reduce str (:keycols params)) (:versioncol params) " FROM " (:tblname params) (:querysuffix params)))
+  (.trim (str "SELECT " 
+           (reduce #(str %1 "," %2) (:keycols params)) 
+           ","
+           (:versioncol params) 
+           " FROM " 
+           (:tblname params) 
+           " "
+           (:querysuffix params))))
 
-; TODO: execute query and build a lazy-seq of entities
 (defn build-entity
   "Converts a result set entry into the entity expected by the recon and exception
   functions based on the params specified"

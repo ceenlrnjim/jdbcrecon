@@ -11,3 +11,13 @@
     (is (= (get keymap "key1") "Jim"))
     (is (= (get keymap "key2") 12345))))
 
+(deftest test-build-query
+  (is (= "SELECT key1,key2,key3,version FROM testtable WHERE active = 'Y'"
+         (build-query {:tblname "testtable"
+                       :keycols ["key1" "key2" "key3"]
+                       :versioncol "version"
+                       :querysuffix "WHERE active = 'Y'"})))
+  (is (= "SELECT key1,key2,key3,version FROM testtable"
+         (build-query {:tblname "testtable"
+                       :keycols ["key1" "key2" "key3"]
+                       :versioncol "version"}))))
