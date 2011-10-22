@@ -1,6 +1,6 @@
 # jdbcrecon
 
-FIXME: write description
+Reconciles tables in two different jdbc data sources - compares primary keys and version numbers or time stamps (which must be preserved across sources) and optionally touches the source to trigger replication
 
 ## Usage
 
@@ -8,6 +8,6 @@ FIXME: write
 
 ## License
 
-Copyright (C) 2011 FIXME
+Copyright (C) 2011 James L. Kirkwood
 
 Distributed under the Eclipse Public License, the same as Clojure.
