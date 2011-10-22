@@ -1,1 +1,53 @@
-(ns jdbcrecon.core)
+(ns jdbcrecon.core
+  (:require [clojure.java.jdbc :as sql]))
+
+; TODO: build query
+(defn- build-query
+  "Uses the params to build the select query. 
+  Expects to have :tblname, :keycols, :versioncol, and optional :querysuffix"
+  [params]
+  ; TODO: need commas
+  (str "SELECT" (reduce str (:keycols params)) (:versioncol params) " FROM " (:tblname params) (:querysuffix params)))
+
+; TODO: execute query and build a lazy-seq of entities
+(defn build-entity
+  "Converts a result set entry into the entity expected by the recon and exception
+  functions based on the params specified"
+  [params row]
+  (vector 
+    (reduce 
+      #(assoc %1 %2 (get row (keyword %2))) 
+      {} 
+      (:keycols params)) 
+    (get row (keyword (:versioncol params)))))
+
+(defn- entity-seq
+  "Queries a data source and returns a sequence [{k1 v1 k2 v2 ...} version]"
+  [params]
+  (let [query (build-query params)]
+    (sql/with-connection params
+      (sql/with-query-results rs [query]
+        (map #(build-entity params %1) rs)))))
+
+; TODO: order compare recon
+; TODO: memory-map compare recon
+; TODO: touch entity
+; TODO: exception-func implementations (log, jms, touch, system out)
+
+(defn reconcile
+  "Executes a reconciliation.  source-params and target-params includes all connection parameters 
+  required by clojure.contrib.sql with-connection as well as the following:
+  :tblname <name>
+  :keycols [seq of names]
+  :versioncol <name>
+  :touchcol <name> This can be nil for targets
+  
+  Two different compare types are supported, :version and :timestamp
+  
+  Recon-func should take two sequences of entities.
+  Exception-func should take a sequence of entities."
+  [source-params target-params recon-func compare-type exception-func]
+  (let [src-seq (entity-seq source-params)
+        tgt-seq (entity-seq target-params)]
+    (doseq [e (recon-func src-seq tgt-seq)]
+      (exception-func e))))
