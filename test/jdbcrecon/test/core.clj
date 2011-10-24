@@ -53,3 +53,11 @@
     (is (= (count result) 1))
     (is (= ((first result) 1) :tgt-missing))
     (is (= ((first result) 0) {"key1" 3 "key2" 3}))))
+
+(deftest test-version-mismatch
+  (let [map1 {{"key1" 1 "key2" 1} 2 {"key1" 2 "key2" 2} 1 {"key1" 3 "key2" 3} 1}
+        map2 {{"key1" 1 "key2" 1} 1 {"key1" 2 "key2" 2} 1}
+        result (version-mismatch map1 map2)]
+    (is (= (count result) 1))
+    (is (= ((first result) 1) :version-mismatch))
+    (is (= ((first result) 0) {"key1" 1 "key2" 1}))))

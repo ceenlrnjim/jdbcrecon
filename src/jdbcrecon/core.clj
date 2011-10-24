@@ -93,7 +93,8 @@
 (defn version-mismatch
   "Returns any results that have different version numbers"
   [a b]
-  (detect-problems a b :version-mismatch #(not= (get a %) (get b %))))
+  ; TODO: without the contains, this will detect missing keys as well, is that all we need
+  (detect-problems a b :version-mismatch #(and (contains? b %) (not= (get a %) (get b %)))))
 
 (defn in-memory-recon
   "Loads all the entities in memory to compare sources.  Order doesn't matter but selection
