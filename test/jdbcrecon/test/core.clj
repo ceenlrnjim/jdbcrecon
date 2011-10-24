@@ -45,3 +45,11 @@
         result (ordered-row-recon src-rows tgt-rows)]
     (is (= (count result) 10))
     (is (= (count (filter #(= :version-mismatch %1) result)) 10))))
+
+(deftest test-missing-keys
+  (let [map1 {{"key1" 1 "key2" 1} 2 {"key1" 2 "key2" 2} 1 {"key1" 3 "key2" 3} 1}
+        map2 {{"key1" 1 "key2" 1} 1 {"key1" 2 "key2" 2} 1}
+        result (missing-keys map1 map2 :tgt-missing)]
+    (is (= (count result) 1))
+    (is (= ((first result) 1) :tgt-missing))
+    (is (= ((first result) 0) {"key1" 3 "key2" 3}))))
