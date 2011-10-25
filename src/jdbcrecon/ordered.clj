@@ -35,13 +35,14 @@
                       ; Need to get pre-t entries from src-hist and emit as :tgt-missing
                       (except-remainder (take-while #(not= % t) src-hist) :tgt-missing)
                       ; drop-while will have t in it, so we don't want to (rest) the sequence
-                      (ordered-row-recon (drop-while #(not= % t) src-hist) tgt-seq)))
+                      ; rewind the source seq to point t and add to the rest of src-seq
+                     (ordered-row-recon (lazy-cat (drop-while #(not= % t) src-hist) src-seq) tgt-seq)))
           (contains? tgt-hist s) 
                       ; Need to emit all of src-hist as :tgt-missing
             (lazy-cat (except-remainder src-hist :tgt-missing)
                       ; Need to get pre-s entries from tgt-hist and emit as :src-missing
                       (except-remainder (take-while #(not= % s) tgt-hist) :src-missing)
-                      (ordered-row-recon src-seq (drop-while #(not= % s) tgt-hist)))
+                      (ordered-row-recon src-seq (lazy-cat (drop-while #(not= % s) tgt-hist) tgt-seq)))
           :else (recur (rest src-seq) 
                        (rest tgt-seq)
                        (conj src-hist s)
