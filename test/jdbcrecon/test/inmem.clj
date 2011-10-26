@@ -1,7 +1,7 @@
 (ns jdbcrecon.test.inmem
   (:use [jdbcrecon.core])
   (:use [jdbcrecon.inmem])
-  (:use [jdbcrecon.test.ordered :only (range-rows)])
+  (:use [jdbcrecon.test.testbase])
   (:use [clojure.test]))
 
 (deftest test-missing-keys
@@ -21,11 +21,6 @@
     (is (= ((first result) 0) {"key1" 1 "key2" 1}))))
 
 (deftest test-in-memory-recon
-  (let [src-rows (range-rows 0 10)
-        tgt-rows (range-rows 0 10)
-        missing-row (range-rows 0 9)
-        mismatch-row (range-rows 0 10 1)]
-    (is (empty? (in-memory-recon src-rows tgt-rows)))
-    (is (= [{"key1" 9 "key2" 9} :tgt-missing] (first (in-memory-recon src-rows missing-row))))
-    (is (= [{"key1" 9 "key2" 9} :src-missing] (first (in-memory-recon missing-row src-rows))))
-    (is (= (count (in-memory-recon src-rows mismatch-row)) 10))))
+  (test-target-behind in-memory-recon)
+  (test-source-behind in-memory-recon)
+  (test-missing in-memory-recon))

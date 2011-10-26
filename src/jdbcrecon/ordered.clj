@@ -20,7 +20,7 @@
 (defn- except-remainder
   "Returns all the entities in the sequence as issues with the specified code"
   [s issue]
-  (map #(vec (% 0) issue) s))
+  (map #(vector (% 0) issue) s))
 
 (declare ordered-row-recon)
 
