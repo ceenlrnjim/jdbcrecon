@@ -2,6 +2,8 @@
 
 Reconciles tables in two different jdbc data sources - compares primary keys and version numbers or time stamps (which must be preserved across sources) and optionally touches the source to trigger replication
 
+Primarily an exercise to learn clojure
+
 ## Usage
 
 FIXME: write
