@@ -2,10 +2,10 @@
 
 ; Contains implementations of the recon function for use with jdbcrecon.core
 ;
-(defn issue-code
+(defn versions-match?
   "Returns the issue keyword for the specified rows or nil if there is no issue"
   [src-row tgt-row]
-  (if (not= (src-row 1) (tgt-row 1)) :version-mismatch nil))
+  (not= (src-row 1) (tgt-row 1)))
 
 (defn no-nil-cons
   "Adds item to seq if it is not nil, otherwise returns seq"
@@ -66,8 +66,8 @@
     (cond (and (empty? tgt-seq) (empty? src-seq)) nil
           (empty? src-seq) (except-remainder tgt-seq :src-missing)
           (empty? tgt-seq) (except-remainder src-seq :tgt-missing)
-          (keysmatch? src-row tgt-row) (lazy-seq 
-                                         (no-nil-cons 
-                                           (issue-code src-row tgt-row) 
-                                           (ordered-row-recon (rest src-seq) (rest tgt-seq))))
-          :else (resync-seqs src-seq tgt-seq))))
+          (not (keysmatch? src-row tgt-row)) (resync-seqs src-seq tgt-seq)
+          (not (versions-match? src-row tgt-row)) (lazy-seq (cons 
+                                                              (vector (src-row 0) :version-mismatch)
+                                                              (ordered-row-recon (rest src-seq) (rest tgt-seq))))
+          :else (ordered-row-recon (rest src-seq) (rest tgt-seq)))))
