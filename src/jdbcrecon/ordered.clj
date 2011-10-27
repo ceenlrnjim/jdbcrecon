@@ -24,35 +24,78 @@
 
 (declare ordered-row-recon)
 
+; TODO: src-hist and tgt-hist: would like to have maps for fast lookup (contains?)
+; but need an ordered sequence for re-winding to find sync points.
+; Basically want a map that maintains the add order.
+; I could keep both a vector and a map, but then I use more memory when syncing blocks
+; of concurrently missing data
+;
+; Moving to these functions to be able to change implementations 
+(defn- new-entity-history
+  "Returns a data structure for holding items that have been read from the stream but not processed"
+  []
+  (vector #{} []))
+
+(defn- contains-entity?
+  "Returns true if this entity is in the history"
+  [hist e]
+  (contains? (hist 0) e))
+
+(defn- add-entity
+  "Adds an entity to the history"
+  [hist e]
+  (vector (conj (hist 1) e) (conj (hist 0) e))) ; conj at end for vector
+
+(defn- entities-to
+  "Returns the entities in the history up to (but not including) the one specified"
+  [hist e]
+  (take-while #(not= % e) (hist 1)))
+
+(defn- entities-from
+  "Returns the entities in the history from the one specified to the end"
+  [hist e]
+  (drop-while #(not= % e) (hist 1)))
+
+(defn- all-entities
+  "returns ordered list of all entities in the history"
+  [hist]
+  (hist 1))
+; ------------------- End history functions designed to hide data structure to allow changes
+
 (defn- resync-seqs-iter
   "If you have large blocks of missing data this implementation may kill you"
   [src-seq tgt-seq src-hist tgt-hist]
   (let [s (first src-seq)
         t (first tgt-seq)]
-    (cond (contains? src-hist t) 
+    (println "Comparing " s " with " t " with histories " src-hist " and " tgt-hist)
+    (cond (= s t)
+            (lazy-cat (except-remainder src-hist :tgt-missing)
+                      (except-remainder tgt-hist :src-missing)
+                      (ordered-row-recon src-seq tgt-seq))
+          (contains-entity? src-hist t) 
                       ; Need to emit all of tgt-hist as :src-missing
-            (lazy-cat (except-remainder tgt-hist :src-missing
+            (lazy-cat (except-remainder (all-entities tgt-hist) :src-missing
                       ; Need to get pre-t entries from src-hist and emit as :tgt-missing
-                      (except-remainder (take-while #(not= % t) src-hist) :tgt-missing)
+                      (except-remainder (entities-to src-hist t) :tgt-missing)
                       ; drop-while will have t in it, so we don't want to (rest) the sequence
                       ; rewind the source seq to point t and add to the rest of src-seq
-                     (ordered-row-recon (lazy-cat (drop-while #(not= % t) src-hist) src-seq) tgt-seq)))
-          (contains? tgt-hist s) 
+                     (ordered-row-recon (lazy-cat (entities-from src-hist t) src-seq) tgt-seq)))
+          (contains-entity? tgt-hist s) 
                       ; Need to emit all of src-hist as :tgt-missing
-            (lazy-cat (except-remainder src-hist :tgt-missing)
+            (lazy-cat (except-remainder (all-entities src-hist) :tgt-missing)
                       ; Need to get pre-s entries from tgt-hist and emit as :src-missing
-                      (except-remainder (take-while #(not= % s) tgt-hist) :src-missing)
-                      (ordered-row-recon src-seq (lazy-cat (drop-while #(not= % s) tgt-hist) tgt-seq)))
+                      (except-remainder (entities-to tgt-hist s) :src-missing)
+                      (ordered-row-recon src-seq (lazy-cat (entities-from tgt-hist s) tgt-seq)))
           :else (recur (rest src-seq) 
                        (rest tgt-seq)
-                       (conj src-hist s)
-                       (conj tgt-hist s)))))
+                       (add-entity src-hist s)
+                       (add-entity tgt-hist t)))))
 
 (defn resync-seqs
   "Advances both streams to the next entity that is in both.  All intermediary entites are returned with
   either :tgt-missing or :src-missing and the remained are passed to ordered-row-recon"
   [src-seq tgt-seq]
-  (resync-seqs-iter src-seq tgt-seq [] []))
+  (resync-seqs-iter src-seq tgt-seq (new-entity-history) (new-entity-history)))
 
 (defn ordered-row-recon
   "Reconciliation function that assumes the two sequences share the same ordering.

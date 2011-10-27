@@ -25,6 +25,8 @@
       (:keycols params)) 
     (get row (keyword (:versioncol params)))))
 
+; TODO: can I leave out the key names if they're ordered consistently? 
+; Might not need it for processing but it could be useful for emitting results
 (defn- entity-seq
   "Queries a data source and returns a sequence [{k1 v1 k2 v2 ...} version]"
   [params]
