@@ -5,7 +5,7 @@
 (defn versions-match?
   "Returns the issue keyword for the specified rows or nil if there is no issue"
   [src-row tgt-row]
-  (not= (src-row 1) (tgt-row 1)))
+  (= (src-row 1) (tgt-row 1)))
 
 (defn no-nil-cons
   "Adds item to seq if it is not nil, otherwise returns seq"
