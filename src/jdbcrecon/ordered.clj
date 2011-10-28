@@ -1,4 +1,5 @@
-(ns jdbcrecon.ordered)
+(ns jdbcrecon.ordered
+  (:require [clojure.tools.logging :as log]))
 
 ; Contains implementations of the recon function for use with jdbcrecon.core
 ;
@@ -44,13 +45,16 @@
 (defn- add-entity
   "Adds an entity to the history"
   [hist e]
-  (vector (conj (hist 1) e) (conj (hist 0) e))) ; conj at end for vector
+  (vector (conj (hist 0) e) (conj (hist 1) e))) ; conj at end for vector
 
+; TODO: need to just compare the key, not the whole object in case the re-sync point has different version numbers
 (defn- entities-to
   "Returns the entities in the history up to (but not including) the one specified"
   [hist e]
-  (take-while #(not= % e) (hist 1)))
+  (log/debug (str "Getting entities from " hist " up to " e))
+  (log/spy (take-while #(not= % e) (hist 1))))
 
+; TODO: need to just compare the key, not the whole object in case the re-sync point has different version numbers
 (defn- entities-from
   "Returns the entities in the history from the one specified to the end"
   [hist e]
@@ -67,25 +71,29 @@
   [src-seq tgt-seq src-hist tgt-hist]
   (let [s (first src-seq)
         t (first tgt-seq)]
-    (println "Comparing " s " with " t " with histories " src-hist " and " tgt-hist)
+    (log/debug "Comparing " s " with " t " with histories " src-hist " and " tgt-hist)
     (cond (= s t)
             (lazy-cat (except-remainder src-hist :tgt-missing)
                       (except-remainder tgt-hist :src-missing)
                       (ordered-row-recon src-seq tgt-seq))
           (contains-entity? src-hist t) 
                       ; Need to emit all of tgt-hist as :src-missing
+            (do (log/debug "Found target in source history")
             (lazy-cat (except-remainder (all-entities tgt-hist) :src-missing
                       ; Need to get pre-t entries from src-hist and emit as :tgt-missing
                       (except-remainder (entities-to src-hist t) :tgt-missing)
                       ; drop-while will have t in it, so we don't want to (rest) the sequence
                       ; rewind the source seq to point t and add to the rest of src-seq
                      (ordered-row-recon (lazy-cat (entities-from src-hist t) src-seq) tgt-seq)))
+              )
           (contains-entity? tgt-hist s) 
+            (do (log/debug (str "Found source " s " in target history"))
                       ; Need to emit all of src-hist as :tgt-missing
             (lazy-cat (except-remainder (all-entities src-hist) :tgt-missing)
                       ; Need to get pre-s entries from tgt-hist and emit as :src-missing
                       (except-remainder (entities-to tgt-hist s) :src-missing)
                       (ordered-row-recon src-seq (lazy-cat (entities-from tgt-hist s) tgt-seq)))
+              )
           :else (recur (rest src-seq) 
                        (rest tgt-seq)
                        (add-entity src-hist s)
