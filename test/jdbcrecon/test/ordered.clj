@@ -4,7 +4,6 @@
   (:use [jdbcrecon.ordered])
   (:use [clojure.test]))
 
-(comment
 (deftest test-ordered-row-recon-no-issues
   (test-no-issues ordered-row-recon))
 
@@ -24,7 +23,6 @@
     (is (= (count result) 4))
     (is (= (count (filter #(= (% 1) :src-missing) result)) 2))
     (is (= (count (filter #(= (% 1) :tgt-missing) result)) 2))))
-)
 
 ; test to make sure entity history functions work as designed
 (def add-entity (ns-resolve 'jdbcrecon.ordered 'add-entity))
@@ -52,5 +50,15 @@
         result (ordered-row-recon src tgt)]
     (doseq [e result] (println e))
     (is (= (count result) 5))
+    (is (= (count (filter #(= (% 1) :src-missing) result)) 2))
+    (is (= (count (filter #(= (% 1) :tgt-missing) result)) 3))))
+
+(deftest test-resync-with-version-mismatch
+  (let [src [[{"abc" 1} 1] [{"abc" 2} 1] [{"abc" 3} 1] [{"abc" 4} 1] [{"abc" 5} 1] [{"abc" 8} 1] [{"abc" 9} 1]]
+        tgt [[{"abc" 1} 1] [{"abc" 2} 1] [{"abc" 6} 1] [{"abc" 7} 1] [{"abc" 8} 2] [{"abc" 9} 1]]
+        result (ordered-row-recon src tgt)]
+    (doseq [e result] (println e))
+    (is (= (count result) 6))
+    (is (= (count (filter #(= (% 1) :version-mismatch) result)) 1))
     (is (= (count (filter #(= (% 1) :src-missing) result)) 2))
     (is (= (count (filter #(= (% 1) :tgt-missing) result)) 3))))

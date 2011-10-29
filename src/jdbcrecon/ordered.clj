@@ -1,4 +1,5 @@
 (ns jdbcrecon.ordered
+  (:use [jdbcrecon.core])
   (:require [clojure.tools.logging :as log]))
 
 ; Contains implementations of the recon function for use with jdbcrecon.core
@@ -6,22 +7,17 @@
 (defn versions-match?
   "Returns the issue keyword for the specified rows or nil if there is no issue"
   [src-row tgt-row]
-  (= (src-row 1) (tgt-row 1)))
-
-(defn no-nil-cons
-  "Adds item to seq if it is not nil, otherwise returns seq"
-  [item seq]
-  (if (nil? item) seq (cons item seq)))
+  (= (entity-version src-row) (entity-version tgt-row)))
 
 (defn- keysmatch?
   "returns true if two entity sequence members have the same key"
   [a b]
-  (= (a 0) (b 0)))
+  (= (entity-key a) (entity-key b)))
 
 (defn- except-remainder
   "Returns all the entities in the sequence as issues with the specified code"
   [s issue]
-  (map #(vector (% 0) issue) s))
+  (map #(vector (entity-key %) issue) s))
 
 (declare ordered-row-recon)
 
@@ -37,28 +33,26 @@
   []
   (vector #{} []))
 
+; need to just compare the key, not the whole object in case the re-sync point has different version numbers
 (defn- contains-entity?
   "Returns true if this entity is in the history"
   [hist e]
-  (contains? (hist 0) e))
+  (contains? (hist 0) (entity-key e)))
 
 (defn- add-entity
   "Adds an entity to the history"
   [hist e]
-  (vector (conj (hist 0) e) (conj (hist 1) e))) ; conj at end for vector
+  (vector (conj (hist 0) (entity-key e)) (conj (hist 1) e))) ; conj at end for vector
 
-; TODO: need to just compare the key, not the whole object in case the re-sync point has different version numbers
 (defn- entities-to
   "Returns the entities in the history up to (but not including) the one specified"
   [hist e]
-  (log/debug (str "Getting entities from " hist " up to " e))
-  (log/spy (take-while #(not= % e) (hist 1))))
+  (take-while #(not (keysmatch? % e)) (hist 1)))
 
-; TODO: need to just compare the key, not the whole object in case the re-sync point has different version numbers
 (defn- entities-from
   "Returns the entities in the history from the one specified to the end"
   [hist e]
-  (drop-while #(not= % e) (hist 1)))
+  (drop-while #(not (keysmatch? % e)) (hist 1)))
 
 (defn- all-entities
   "returns ordered list of all entities in the history"
