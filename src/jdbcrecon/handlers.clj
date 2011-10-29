@@ -13,8 +13,16 @@
     (log/error (str "Tables " (:tblname source-params) "/" (:tblname target-params) " out of sync for key " (e 0) " with error code " (e 1)))))
 
 (defn- build-where
+  "Build the vector of where clause parameters  from the key map as required by clojure.java.jdbc/update-values"
   [keymap]
-  nil) ; TODO
+  (reduce (fn [v kvp]
+            (let [s (if (empty? (v 0)) "" " AND ")] ; only add an AND if this isn't the first column
+              (apply vector  ; create a new vector of-
+                (cons 
+                  (str (first v) s (kvp 0) " = ?") ; update the string to have an additional condition
+                  (conj (subvec v 1) (kvp 1)))))) ; add the value to be bound to that condition
+          [""]
+          keymap))
 
 (defn touch-source
   "Returns a function that if source params contains the :touchcol option, this handler will update any records 
