@@ -45,7 +45,6 @@
       (sql/with-query-results rs [query]
         (map #(build-entity params %1) rs)))))
 
-; TODO: touch entity
 ; TODO: exception-func implementations (log, jms, touch, system out)
 (defn reconcile
   "Executes a reconciliation.  source-params and target-params includes all connection parameters 
@@ -54,11 +53,12 @@
   :keycols [seq of names]
   :versioncol <name>
   :touchcol <name> This can be nil for targets
+  :touchval <value> the value to be set when touching records
   
   Two different compare types are supported, :version and :timestamp
   
   Recon-func should take two sequences of entities.
-  Exception-func should take a sequence of entities."
+  Exception-func should take a sequence of [key-map issue]"
   [source-params target-params recon-func compare-type exception-func]
   (let [src-seq (entity-seq source-params)
         tgt-seq (entity-seq target-params)]

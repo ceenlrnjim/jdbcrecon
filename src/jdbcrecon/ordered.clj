@@ -28,6 +28,7 @@
 ; of concurrently missing data
 ;
 ; Moving to these functions to be able to change implementations 
+; Currently using a set of keys and a vector of entities for replay
 (defn- new-entity-history
   "Returns a data structure for holding items that have been read from the stream but not processed"
   []
