@@ -60,57 +60,80 @@
   [hist]
   (hist 1))
 ; ------------------- End history functions designed to hide data structure to allow changes
+(defn- sync-at-both-seqs-empty
+  "Handles case where we've come to the end of both streams without finding a a place to resynchronize.
+  Everything in both histories are missing from the other source."
+  [src-hist tgt-hist]
+  (log/debug "Both sequences empty, emitting remainders of both")
+  (lazy-cat (except-remainder (all-entities src-hist) :tgt-missing)
+            (except-remainder (all-entities tgt-hist) :src-missing)))
 
-; TODO: clean up this function
+(defn- sync-at-empty-seq
+  "Handles the case where one of the two sequences run out of items before finding a sync point."
+  [non-empty-seq issue tgt-missing-hist src-missing-hist]
+  (log/debug "Sequence empty")
+  (lazy-cat (except-remainder (all-entities tgt-missing-hist) :tgt-missing)
+            (except-remainder (all-entities src-missing-hist) :src-missing)
+            (except-remainder non-empty-seq issue)))
+
+(defn- sync-at-matching-items
+  "Handles the case where the next two items in the sequences are the sync point"
+  [src-seq tgt-seq src-hist tgt-hist]
+  (lazy-cat (except-remainder src-hist :tgt-missing)
+            (except-remainder tgt-hist :src-missing)
+            (ordered-row-recon src-seq tgt-seq)))
+
+(defn- sync-at-src-hist
+  "Handles the case where the next item in the target sequence needs to be synchronized with a point in
+  the source history"
+  [src-seq s tgt-seq t src-hist tgt-hist]
+  (log/debug "Found target in source history")
+  (lazy-cat 
+    ; Need to emit all of tgt-hist as :src-missing
+    (except-remainder (all-entities tgt-hist) :src-missing)
+    ; Need to get pre-t entries from src-hist and emit as :tgt-missing
+    (except-remainder (entities-to src-hist t) :tgt-missing)
+    ; drop-while will have t in it, so we don't want to (rest) the sequence
+    ; rewind the source seq to point t and add to the rest of src-seq
+    (ordered-row-recon (lazy-cat (entities-from src-hist t) src-seq) tgt-seq)))
+
+(defn- sync-at-tgt-hist
+  "Handles the case where the next item in the source sequence needs to be synchronized with a point in
+  the target history"
+  [src-seq s tgt-seq t src-hist tgt-hist]
+  (log/debug "Found source " s " in target history")
+  (lazy-cat 
+    ; Need to emit all of src-hist as :tgt-missing
+    (except-remainder (all-entities src-hist) :tgt-missing)
+    ; Need to get pre-s entries from tgt-hist and emit as :src-missing
+    (except-remainder (entities-to tgt-hist s) :src-missing)
+    (ordered-row-recon src-seq (lazy-cat (entities-from tgt-hist s) tgt-seq))))
+
 (defn- resync-seqs-iter
-  "If you have large blocks of missing data this implementation may kill you"
+  "Iterative implementation of the function that re-synchronizes the streams to find the next common point and emits
+  exceptions for everything that is missing from either sequence"
   [src-seq tgt-seq src-hist tgt-hist]
   (let [s (first src-seq)
         t (first tgt-seq)]
     (log/debug "Comparing " s " with " t " with histories " src-hist " and " tgt-hist)
-    (cond (and (empty? src-seq) (empty? tgt-seq))
-            (do (log/debug "Both sequences empty, emitting remainders of both")
-            (lazy-cat (except-remainder (all-entities src-hist) :tgt-missing)
-                      (except-remainder (all-entities tgt-hist) :src-missing))
-            )
-          (empty? src-seq)
-            (do (log/debug "Source sequence empty")
-            (lazy-cat (except-remainder (all-entities src-hist) :tgt-missing)
-                      (except-remainder (all-entities tgt-hist) :src-missing)
-                      (except-remainder tgt-seq :src-missing))
-            )
-          (empty? tgt-seq)
-            (do (log/debug "Target sequence empty")
-            (lazy-cat (except-remainder (all-entities src-hist) :tgt-missing)
-                      (except-remainder (all-entities tgt-hist) :src-missing)
-                      (except-remainder src-seq :tgt-missing))
-            )
-          (= s t)
-            (lazy-cat (except-remainder src-hist :tgt-missing)
-                      (except-remainder tgt-hist :src-missing)
-                      (ordered-row-recon src-seq tgt-seq))
-          (contains-entity? src-hist t) 
-                      ; Need to emit all of tgt-hist as :src-missing
-            (do (log/debug "Found target in source history")
-            (lazy-cat (except-remainder (all-entities tgt-hist) :src-missing
-                      ; Need to get pre-t entries from src-hist and emit as :tgt-missing
-                      (except-remainder (entities-to src-hist t) :tgt-missing)
-                      ; drop-while will have t in it, so we don't want to (rest) the sequence
-                      ; rewind the source seq to point t and add to the rest of src-seq
-                     (ordered-row-recon (lazy-cat (entities-from src-hist t) src-seq) tgt-seq)))
-              )
-          (contains-entity? tgt-hist s) 
-            (do (log/debug (str "Found source " s " in target history"))
-                      ; Need to emit all of src-hist as :tgt-missing
-            (lazy-cat (except-remainder (all-entities src-hist) :tgt-missing)
-                      ; Need to get pre-s entries from tgt-hist and emit as :src-missing
-                      (except-remainder (entities-to tgt-hist s) :src-missing)
-                      (ordered-row-recon src-seq (lazy-cat (entities-from tgt-hist s) tgt-seq)))
-              )
-          :else (recur (rest src-seq) 
-                       (rest tgt-seq)
-                       (add-entity src-hist s)
-                       (add-entity tgt-hist t)))))
+    (cond 
+      ; Both sequences are empty
+      (and (empty? src-seq) (empty? tgt-seq)) (sync-at-both-seqs-empty src-hist tgt-hist)
+      ; Source sequence is empty
+      (empty? src-seq) (sync-at-empty-seq tgt-seq :src-missing src-hist tgt-hist)
+      ; Target sequence is empty
+      (empty? tgt-seq) (sync-at-empty-seq src-seq :tgt-missing src-hist tgt-hist)
+      ; next items match
+      (= s t) (sync-at-matching-items src-seq tgt-seq src-hist tgt-hist)
+      ; target item is in source history
+      (contains-entity? src-hist t) (sync-at-src-hist src-seq s tgt-seq t src-hist tgt-hist)
+      ; source item is in target history
+      (contains-entity? tgt-hist s) (sync-at-tgt-hist src-seq s tgt-seq t src-hist tgt-hist)
+      ; No match yet, keep going
+      :else (recur (rest src-seq) 
+                   (rest tgt-seq)
+                   (add-entity src-hist s)
+                   (add-entity tgt-hist t)))))
 
 (defn resync-seqs
   "Advances both streams to the next entity that is in both.  All intermediary entites are returned with
