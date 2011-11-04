@@ -15,14 +15,18 @@
            " "
            (:querysuffix params))))
 
+; TODO: if column names don't match, keys don't match - need to take 
+; key names out of entities
 (defn build-entity
   "Converts a result set entry into the entity expected by the recon and exception
   functions based on the params specified"
   [params row]
   (vector 
     (reduce 
-      #(assoc %1 %2 (get row (keyword %2))) 
-      {} 
+      ; can't have key names or keys won't match when column names are different
+      ;#(assoc %1 %2 (get row (keyword %2))) 
+      #(conj %1 (get row (keyword %2))) 
+      [] 
       (.split (:keycols params) ",")) 
     (get row (keyword (:versioncol params)))))
 
@@ -35,18 +39,6 @@
   "Takes an entity from a entity-seq returns the map of its version"
   [e]
   (e 1))
-
-(comment
-(defn entity-seq
-  "Queries a data source and returns a sequence [{k1 v1 k2 v2 ...} version]"
-  [params]
-  (let [query (build-query params)]
-    (log/debug "Executing query: " query)
-    (sql/with-connection params
-      (sql/with-query-results rs [query]
-        ; TODO: result set gets closed when returning
-        (map #(build-entity params %1) rs)))))
-)
 
 (defn reconcile
   "Executes a reconciliation.  source-params and target-params includes all connection parameters 

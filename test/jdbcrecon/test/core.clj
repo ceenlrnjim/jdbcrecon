@@ -6,10 +6,10 @@
   (let [row {:key1 "Jim" :key2 12345 :ver 1}
         params {:keycols "key1,key2" :versioncol "ver"}
         result (build-entity params row)
-        keymap (result 0)]
+        keyvec (result 0)]
     (is (= (result 1) 1)) ; Test version number
-    (is (= (get keymap "key1") "Jim"))
-    (is (= (get keymap "key2") 12345))))
+    (is (= (get keyvec 0) "Jim"))
+    (is (= (get keyvec 1) 12345))))
 
 (deftest test-build-query
   (is (= "SELECT key1,key2,key3,version FROM testtable WHERE active = 'Y'"

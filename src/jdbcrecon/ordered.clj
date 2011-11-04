@@ -61,13 +61,31 @@
   (hist 1))
 ; ------------------- End history functions designed to hide data structure to allow changes
 
+; TODO: clean up this function
 (defn- resync-seqs-iter
   "If you have large blocks of missing data this implementation may kill you"
   [src-seq tgt-seq src-hist tgt-hist]
   (let [s (first src-seq)
         t (first tgt-seq)]
     (log/debug "Comparing " s " with " t " with histories " src-hist " and " tgt-hist)
-    (cond (= s t)
+    (cond (and (empty? src-seq) (empty? tgt-seq))
+            (do (log/debug "Both sequences empty, emitting remainders of both")
+            (lazy-cat (except-remainder (all-entities src-hist) :tgt-missing)
+                      (except-remainder (all-entities tgt-hist) :src-missing))
+            )
+          (empty? src-seq)
+            (do (log/debug "Source sequence empty")
+            (lazy-cat (except-remainder (all-entities src-hist) :tgt-missing)
+                      (except-remainder (all-entities tgt-hist) :src-missing)
+                      (except-remainder tgt-seq :src-missing))
+            )
+          (empty? tgt-seq)
+            (do (log/debug "Target sequence empty")
+            (lazy-cat (except-remainder (all-entities src-hist) :tgt-missing)
+                      (except-remainder (all-entities tgt-hist) :src-missing)
+                      (except-remainder src-seq :tgt-missing))
+            )
+          (= s t)
             (lazy-cat (except-remainder src-hist :tgt-missing)
                       (except-remainder tgt-hist :src-missing)
                       (ordered-row-recon src-seq tgt-seq))

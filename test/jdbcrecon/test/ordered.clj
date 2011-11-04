@@ -24,6 +24,16 @@
     (is (= (count (filter #(= (% 1) :src-missing) result)) 2))
     (is (= (count (filter #(= (% 1) :tgt-missing) result)) 2))))
 
+(deftest test-concurrent-missing-at-end
+  (let [src [[{"key1" 1} 1] [{"key1" 2} 1] [{"key1" 3} 1] [{"key1" 4} 1] [{"key1" 5} 1]]
+        tgt [[{"key1" 1} 1] [{"key1" 2} 1] [{"key1" 3} 1] [{"key1" 6} 1] [{"key1" 7} 1]]
+        result (ordered-row-recon src tgt)]
+    (doseq [r result] (println r))
+    (is (= (count result) 4))
+    (is (= (count (filter #(= (% 1) :src-missing) result)) 2))
+    (is (= (count (filter #(= (% 1) :tgt-missing) result)) 2))
+    (is (= (count (filter #(= (% 0) nil) result)) 0))))
+
 ; test to make sure entity history functions work as designed
 (def add-entity (ns-resolve 'jdbcrecon.ordered 'add-entity))
 (def new-entity-history (ns-resolve 'jdbcrecon.ordered 'new-entity-history))
