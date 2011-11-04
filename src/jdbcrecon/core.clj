@@ -15,16 +15,13 @@
            " "
            (:querysuffix params))))
 
-; TODO: if column names don't match, keys don't match - need to take 
-; key names out of entities
 (defn build-entity
   "Converts a result set entry into the entity expected by the recon and exception
   functions based on the params specified"
   [params row]
   (vector 
     (reduce 
-      ; can't have key names or keys won't match when column names are different
-      ;#(assoc %1 %2 (get row (keyword %2))) 
+      ; Note that column names must be in the same order in the configuration
       #(conj %1 (get row (keyword %2))) 
       [] 
       (.split (:keycols params) ",")) 
@@ -44,7 +41,7 @@
   "Executes a reconciliation.  source-params and target-params includes all connection parameters 
   required by clojure.contrib.sql with-connection as well as the following:
   :tblname <name>
-  :keycols [seq of names]
+  :keycols [seq of names] - note that the keycols must be in the same order in both configs though the names can be different
   :versioncol <name>
   :touchcol <name> This can be nil for targets
   :touchval <value> the value to be set when touching records
