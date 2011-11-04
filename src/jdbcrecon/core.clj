@@ -1,4 +1,5 @@
 (ns jdbcrecon.core
+  (:require [clojure.tools.logging :as log])
   (:require [clojure.java.jdbc :as sql]))
 
 (defn build-query
@@ -6,7 +7,7 @@
   Expects to have :tblname, :keycols, :versioncol, and optional :querysuffix"
   [params]
   (.trim (str "SELECT " 
-           (reduce #(str %1 "," %2) (:keycols params)) 
+           (:keycols params)
            ","
            (:versioncol params) 
            " FROM " 
@@ -35,17 +36,16 @@
   [e]
   (e 1))
 
-; TODO: can I leave out the key names if they're ordered consistently? 
-; Might not need it for processing but it could be useful for emitting results
 (defn entity-seq
   "Queries a data source and returns a sequence [{k1 v1 k2 v2 ...} version]"
   [params]
   (let [query (build-query params)]
+    (log/debug "Executing query: " query)
     (sql/with-connection params
       (sql/with-query-results rs [query]
+        ; TODO: result set gets closed when returning
         (map #(build-entity params %1) rs)))))
 
-; TODO: exception-func implementations (log, jms, touch, system out)
 (defn reconcile
   "Executes a reconciliation.  source-params and target-params includes all connection parameters 
   required by clojure.contrib.sql with-connection as well as the following:

@@ -24,6 +24,7 @@
           [""]
           keymap))
 
+; (reconcile sp tg rf :version (touch-source sp))
 (defn touch-source
   "Returns a function that if source params contains the :touchcol option, this handler will update any records 
   that are returned as exceptions except for :src-missing.  Those need to be deleted"
@@ -32,4 +33,4 @@
     (sql/with-connection
       (sql/update-values (:tblname source-params)
                          (build-where (e 0))
-                         (:touchval source-params)))))
+                         {(:touchcol source-params) (:touchval source-params)}))))
