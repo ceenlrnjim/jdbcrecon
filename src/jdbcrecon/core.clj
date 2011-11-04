@@ -23,7 +23,7 @@
     (reduce 
       #(assoc %1 %2 (get row (keyword %2))) 
       {} 
-      (:keycols params)) 
+      (.split (:keycols params) ",")) 
     (get row (keyword (:versioncol params)))))
 
 (defn entity-key
@@ -36,6 +36,7 @@
   [e]
   (e 1))
 
+(comment
 (defn entity-seq
   "Queries a data source and returns a sequence [{k1 v1 k2 v2 ...} version]"
   [params]
@@ -45,6 +46,7 @@
       (sql/with-query-results rs [query]
         ; TODO: result set gets closed when returning
         (map #(build-entity params %1) rs)))))
+)
 
 (defn reconcile
   "Executes a reconciliation.  source-params and target-params includes all connection parameters 
@@ -60,7 +62,16 @@
   Recon-func should take two sequences of entities.
   Exception-func should take a sequence of [key-map issue]"
   [source-params target-params recon-func compare-type exception-func]
-  (let [src-seq (entity-seq source-params)
-        tgt-seq (entity-seq target-params)]
-    (doseq [e (recon-func src-seq tgt-seq)]
-      (exception-func e))))
+  (sql/with-connection source-params
+    (sql/with-query-results src-rs [(build-query source-params)]
+      (sql/with-connection target-params
+        (sql/with-query-results tgt-rs [(build-query target-params)]
+          (doseq [e (recon-func
+                      (map #(build-entity source-params %) src-rs)
+                      (map #(build-entity target-params %) tgt-rs))]
+            (exception-func e)))))))
+
+;  (let [src-seq (entity-seq source-params)
+;        tgt-seq (entity-seq target-params)]
+;    (doseq [e (recon-func src-seq tgt-seq)]
+;      (exception-func e))))

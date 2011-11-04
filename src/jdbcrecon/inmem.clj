@@ -1,4 +1,6 @@
-(ns jdbcrecon.inmem)
+(ns jdbcrecon.inmem
+  (:require [clojure.tools.logging :as log]))
+  
 
 (defn detect-problems
   [a b issue-type filter-func]
@@ -26,6 +28,8 @@
   [src-seq tgt-seq]
   (let [srcmap (reduce #(assoc %1 (%2 0) (%2 1)) {} src-seq)
         tgtmap (reduce #(assoc %1 (%2 0) (%2 1)) {} tgt-seq)]
+    (log/debug "Source: " srcmap)
+    (log/debug "Target: " tgtmap)
     (lazy-cat
       (missing-keys srcmap tgtmap :tgt-missing)
       (missing-keys tgtmap srcmap :src-missing)
