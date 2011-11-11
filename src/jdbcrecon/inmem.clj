@@ -19,7 +19,6 @@
 (defn version-mismatch
   "Returns any results that have different version numbers"
   [a b]
-  ; TODO: without the contains, this will detect missing keys as well, is that all we need
   (detect-problems a b :version-mismatch #(and (contains? b %) (not= (get a %) (get b %)))))
 
 (defn in-memory-recon

@@ -59,8 +59,3 @@
                       (map #(build-entity source-params %) src-rs)
                       (map #(build-entity target-params %) tgt-rs))]
             (exception-func e)))))))
-
-;  (let [src-seq (entity-seq source-params)
-;        tgt-seq (entity-seq target-params)]
-;    (doseq [e (recon-func src-seq tgt-seq)]
-;      (exception-func e))))

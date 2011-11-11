@@ -10,7 +10,6 @@
   "Returns a function suitable for processing recon exceptions that logs to log4j"
   [source-params target-params]
   (fn [e]
-    (log/debug "Processing exception: " e)
     (log/error "Tables " (:tblname source-params) "/" (:tblname target-params) " out of sync for key " (e 0) " with error code " (e 1))))
 
 (defn- build-where
