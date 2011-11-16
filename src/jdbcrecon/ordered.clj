@@ -157,4 +157,4 @@
           (not (versions-match? src-row tgt-row)) (lazy-seq (cons 
                                                               (vector (src-row 0) :version-mismatch)
                                                               (ordered-row-recon (rest src-seq) (rest tgt-seq))))
-          :else (ordered-row-recon (rest src-seq) (rest tgt-seq)))))
+          :else (recur (rest src-seq) (rest tgt-seq)))))
