@@ -5,7 +5,8 @@
   (:use [jdbcrecon.ordered])
   (:use [jdbcrecon.handlers])
   (:require [clojure.tools.cli :as cli])
-  (:require [clojure.tools.logging :as log]))
+  (:require [clojure.tools.logging :as log])
+  (:gen-class))
 
 (defn- load-params
   "Loads a property file into a map and converts keys to keywords"
