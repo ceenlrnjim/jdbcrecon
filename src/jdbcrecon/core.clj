@@ -6,14 +6,16 @@
   "Uses the params to build the select query. 
   Expects to have :tblname, :keycols, :versioncol, and optional :querysuffix"
   [params]
-  (.trim (str "SELECT " 
-           (:keycols params)
-           ","
-           (:versioncol params) 
-           " FROM " 
-           (:tblname params) 
-           " "
-           (:querysuffix params))))
+  (let [result (.trim (str "SELECT " 
+                         (:keycols params)
+                         ","
+                         (:versioncol params) 
+                         " FROM " 
+                         (:tblname params) 
+                         " "
+                         (:querysuffix params)))]
+    (log/debug "Query = " result)
+    result))
 
 (defn build-entity
   "Converts a result set entry into the entity expected by the recon and exception

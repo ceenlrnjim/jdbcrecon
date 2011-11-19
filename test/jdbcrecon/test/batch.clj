@@ -53,3 +53,13 @@
     (is (= (:subprotocol sp) "mysql"))
     (is (= (:user sp) "jdbcrecon_user"))
     (is (= (:password sp) "mysql"))))
+
+(def build-recons (ns-resolve 'jdbcrecon.batch 'build-recons))
+(deftest test-build-recons
+  (let [config (xml/parse (java.io.ByteArrayInputStream. (.getBytes test-config)))
+        sp (build-db-params config "source-db-params")
+        tp (build-db-params config "target-db-params")
+        result (build-recons config sp tp)]
+    (is (= (count result) 2))
+    (is (= (count (filter #(fn? %) result)) 2))))
+

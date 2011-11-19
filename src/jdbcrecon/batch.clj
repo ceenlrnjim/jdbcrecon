@@ -58,8 +58,9 @@
   (map #(fn [] (reconcile (merge (xml/attrs (first (child-tags % "source"))) sp) ; put all the keys from the xml element into the map
                           (merge (xml/attrs (first (child-tags % "target"))) tp)
                           (recon-func (:algo (xml/attrs %)))
-                          (handler-func (:handler (xml/attrs %)))))
-    (child-tags (child-tags config "tables") "table")))
+                          nil ; unused argument compare-type
+                          (handler-func (:handler (xml/attrs %)) sp tp)))
+    (child-tags (first (child-tags config "tables")) "table")))
 
 (defn batch-recon
   "Parses the specified XML config file and returns a sequence of zero argument functions, one for each recon job.
@@ -78,6 +79,9 @@
   [recon-seq]
   (pmap #(%) recon-seq))
 
+(comment
+  ; removing scheduling functionality - use cron or other scheduling software to run a batch of recons
+  ; don't want to duplicate that functionality here
 (defn schedule
   "Executest the specified config file with the specified exec function according to the specified schedule.
   Currently schedule just supports number of minutes to sleep between executions"
@@ -86,4 +90,4 @@
     (while true
       (execFunc funcs)
       (Thread/sleep (* 1000 60 schedule)))))
-    
+)
