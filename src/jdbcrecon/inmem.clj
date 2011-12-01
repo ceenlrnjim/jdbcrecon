@@ -3,6 +3,8 @@
   
 
 (defn detect-problems
+  "filters the keys of map a with the specified filter-function and returns all results as
+  exceptions with the specified issue type"
   [a b issue-type filter-func]
   (map
     #(vector % issue-type)
@@ -14,8 +16,6 @@
   [a b issue-type]
   (detect-problems a b issue-type #(not (contains? b %))))
 
-; TODO: probably need a defmulti to dispatch on date versus number
-; or will default date comparison work - might depend on query
 (defn version-mismatch
   "Returns any results that have different version numbers"
   [a b]

@@ -34,23 +34,23 @@
     (is (= (count (filter #(= (% 1) :tgt-missing) result)) 2))
     (is (= (count (filter #(= (% 0) nil) result)) 0))))
 
-; test to make sure entity history functions work as designed
-(def add-entity (ns-resolve 'jdbcrecon.ordered 'add-entity))
-(def new-entity-history (ns-resolve 'jdbcrecon.ordered 'new-entity-history))
-(def contains-entity? (ns-resolve 'jdbcrecon.ordered 'contains-entity?))
-(def entities-from (ns-resolve 'jdbcrecon.ordered 'entities-from))
-(def entities-to (ns-resolve 'jdbcrecon.ordered 'entities-to))
-(deftest test-entity-hist-structs
-  (let [e (new-entity-history)
-        a (add-entity e [{"key1" 1} 1])
-        b (reduce #(add-entity %1 %2) e [[{"key1" 1} 1] [{"key1" 2} 2] [{"key1" 3} 3] [{"key1" 4} 4] [{"key1" 5} 5]])
-        t (entities-to b [{"key1" 3} 3])
-        f (entities-from b [{"key1" 3} 3])]
+; test to make sure record history functions work as designed
+(def add-record (ns-resolve 'jdbcrecon.ordered 'add-record))
+(def new-record-history (ns-resolve 'jdbcrecon.ordered 'new-record-history))
+(def contains-record? (ns-resolve 'jdbcrecon.ordered 'contains-record?))
+(def records-from (ns-resolve 'jdbcrecon.ordered 'records-from))
+(def records-to (ns-resolve 'jdbcrecon.ordered 'records-to))
+(deftest test-record-hist-structs
+  (let [e (new-record-history)
+        a (add-record e [{"key1" 1} 1])
+        b (reduce #(add-record %1 %2) e [[{"key1" 1} 1] [{"key1" 2} 2] [{"key1" 3} 3] [{"key1" 4} 4] [{"key1" 5} 5]])
+        t (records-to b [{"key1" 3} 3])
+        f (records-from b [{"key1" 3} 3])]
     (is (set? (e 0)))
     (is (vector? (e 1)))
     (is (set? (a 0)))
     (is (vector? (a 1)))
-    (is (contains-entity? a [{"key1" 1} 1]))
+    (is (contains-record? a [{"key1" 1} 1]))
     (is (= (count t) 2))
     (is (= (count f) 3))))
 

@@ -2,7 +2,7 @@
   (:require [clojure.tools.logging :as log])
   (:require [clojure.java.jdbc :as sql]))
 
-(defn build-query
+(defn- build-query
   "Uses the params to build the select query. 
   Expects to have :tblname, :keycols, :versioncol, and optional :querysuffix"
   [params]
@@ -17,9 +17,10 @@
     (log/debug "Query = " result)
     result))
 
-(defn build-entity
-  "Converts a result set entry into the entity expected by the recon and exception
-  functions based on the params specified"
+(defn- build-record
+  "Converts a result set row into the record expected by the recon and exception
+  functions based on the params specified.  Returns a data structure containing a key 
+  (accessible with the record-key accessor) and a version (via the record-version accessor)"
   [params row]
   (vector 
     (reduce 
@@ -29,15 +30,17 @@
       (.split (:keycols params) ",")) 
     (get row (keyword (:versioncol params)))))
 
-(defn entity-key
-  "Takes an entity from a entity-seq returns the map of its key column names and values"
+(defn record-key
+  "Accessor that returns the key for a record"
   [e]
   (e 0))
 
-(defn entity-version
-  "Takes an entity from a entity-seq returns the map of its version"
+(defn record-version
+  "accessor that reutns the version for a record"
   [e]
   (e 1))
+
+; TODO: need the structure of exceptions to be defined by the core, not implicit in the various recon alogrithms
 
 (defn reconcile
   "Executes a reconciliation.  source-params and target-params includes all connection parameters 
@@ -50,14 +53,16 @@
   
   Two different compare types are supported, :version and :timestamp
   
-  Recon-func should take two sequences of entities.
-  Exception-func should take a sequence of [key-map issue]"
+  Recon-func should be a function that takes two lazy sequences of records (see record-key and record-version)
+  and returns a sequence of exceptions (vector with keys at index 0 and issue code at index 1).
+
+  Exception-func should take a sequence of [key-seq issue] and responds accordingly with some side effect"
   [source-params target-params recon-func compare-type exception-func]
   (sql/with-connection source-params
     (sql/with-query-results src-rs [(build-query source-params)]
       (sql/with-connection target-params
         (sql/with-query-results tgt-rs [(build-query target-params)]
           (doseq [e (recon-func
-                      (map #(build-entity source-params %) src-rs)
-                      (map #(build-entity target-params %) tgt-rs))]
+                      (map #(build-record source-params %) src-rs)
+                      (map #(build-record target-params %) tgt-rs))]
             (exception-func e)))))))
